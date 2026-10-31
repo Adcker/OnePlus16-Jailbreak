@@ -28,22 +28,23 @@ jobs:
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
 
-      - name: Prepare Config and Permissions
+      # 直接在根目录配置文件
+      - name: Prepare Config
         run: |
-          # 【关键修复】必须在根目录给 gradlew 执行权限！
+          # 确保当前的 gradlew 有执行权限
           chmod +x gradlew
           
-          cd app
-          # 配置空签名（骗过编译检查）
-          echo "" > keystore.properties
+          # 在根目录生成 SDK 配置文件
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           
-          # 作者 README 里的本地配置
-          chmod +x ../gradlew
+          # 进 app 目录处理作者要求的签名文件
+          cd app
+          echo "" > keystore.properties
 
+      # 回到根目录，执行根目录的 gradlew
       - name: Build Debug
         run: |
-          # 直接用根目录的 gradlew 编译 app 模块
+          # 使用根目录的 gradlew 调用 app 模块的编译任务
           ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK
