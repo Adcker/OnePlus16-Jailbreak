@@ -22,35 +22,29 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # 【关键修复】绕过出bug的插件，纯手工指定 GitHub 自带的 SDK 路径并同意协议
       - name: Setup Android SDK Manually
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-          # 强制同意所有协议，防止卡住
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
 
-      - name: Prepare Config
+      - name: Prepare Config and Permissions
         run: |
-          if [ -d "app" ]; then
-            cd app
-            # 建空签名
-            echo "" > keystore.properties
-            echo "sdk.dir=$ANDROID_HOME" > local.properties
-          else
-            echo "❌ 警告：找不到 app 目录"
-            ls -la
-            exit 1
-          fi
+          # 【关键修复】必须在根目录给 gradlew 执行权限！
+          chmod +x gradlew
+          
+          cd app
+          # 配置空签名（骗过编译检查）
+          echo "" > keystore.properties
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          
+          # 作者 README 里的本地配置
+          chmod +x ../gradlew
 
       - name: Build Debug
         run: |
-          cd app
-          chmod +x ../gradlew
-          # 原作者要求的命令，如果报错找不到 gradlew 就换成 ../gradlew
-          ../gradlew assembleDebug --stacktrace
+          # 直接用根目录的 gradlew 编译 app 模块
+          ./gradlew :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
